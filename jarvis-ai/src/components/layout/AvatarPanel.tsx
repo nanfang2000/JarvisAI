@@ -146,7 +146,7 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({
   const toggleCamera = async () => {
     try {
       if (!state.cameraEnabled) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await (navigator as any).mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
@@ -172,7 +172,7 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({
   const toggleMic = async () => {
     try {
       if (!state.micEnabled) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        await (navigator as any).mediaDevices.getUserMedia({ audio: true });
         setState(prev => ({ ...prev, micEnabled: true }));
         onShowNotification('麦克风已启用', 'success');
       } else {

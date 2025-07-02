@@ -64,7 +64,7 @@ interface PlaceDetails {
 
 type TravelMode = 'DRIVING' | 'WALKING' | 'TRANSIT' | 'BICYCLING';
 
-const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 const MapView: React.FC<MapViewProps> = ({ className, onLocationSelect, onRouteCalculated }) => {
   const mapRef = useRef<HTMLDivElement>(null);

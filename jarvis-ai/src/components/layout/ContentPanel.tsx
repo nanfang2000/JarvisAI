@@ -322,14 +322,17 @@ const ContentPanel: React.FC<ContentPanelProps> = ({
     onShowNotification(`语音识别错误: ${error}`, 'error');
   }, [onShowNotification]);
 
+  const isConnectedRef = useRef(isConnected);
+  useEffect(() => { isConnectedRef.current = isConnected; }, [isConnected]);
+
   // 发送语音消息
   const sendVoiceMessage = async (content: string) => {
     console.log('📤 sendVoiceMessage 被调用，内容:', content);
     
-    if (!content.trim() || state.isLoading) {
+    if (!content.trim() || !isConnectedRef.current || state.isLoading) {
       console.log('❌ sendVoiceMessage 被阻止:', {
         hasContent: !!content.trim(),
-        isConnected,
+        isConnected:isConnectedRef.current,
         isLoading: state.isLoading
       });
       return;

@@ -92,21 +92,23 @@ if [[ ! -f ".env" ]]; then
 fi
 
 # 启动后端服务
-echo -e "${BLUE}🚀 启动后端服务...${NC}"
-if [[ -f "test_jarvis_server.py" ]]; then
-    python test_jarvis_server.py > server.log 2>&1 &
+echo -e "${BLUE}🚀 启动JARVIS核心服务...${NC}"
+if [[ -f "jarvis-core/main_simple.py" ]]; then
+    cd jarvis-core
+    python main_simple.py > ../server.log 2>&1 &
     BACKEND_PID=$!
+    cd ..
     sleep 3
     
     # 检查后端是否启动成功
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ 后端服务启动成功 (PID: $BACKEND_PID)${NC}"
+    if curl -s http://localhost:8000/status > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ JARVIS核心服务启动成功 (PID: $BACKEND_PID)${NC}"
     else
-        echo -e "${RED}❌ 后端服务启动失败，查看server.log获取详情${NC}"
+        echo -e "${RED}❌ JARVIS核心服务启动失败，查看server.log获取详情${NC}"
         exit 1
     fi
 else
-    echo -e "${RED}❌ 未找到test_jarvis_server.py${NC}"
+    echo -e "${RED}❌ 未找到jarvis-core/main_simple.py${NC}"
     exit 1
 fi
 
@@ -148,7 +150,7 @@ echo -e "${BLUE}📋 系统信息:${NC}"
 echo -e "  🌐 前端地址: ${GREEN}http://localhost:1420${NC}"
 echo -e "  🔧 后端地址: ${GREEN}http://localhost:8000${NC}"
 echo -e "  📖 API文档: ${GREEN}http://localhost:8000/docs${NC}"
-echo -e "  📊 健康检查: ${GREEN}http://localhost:8000/health${NC}"
+echo -e "  📊 健康检查: ${GREEN}http://localhost:8000/status${NC}"
 
 echo ""
 echo -e "${BLUE}📝 进程信息:${NC}"

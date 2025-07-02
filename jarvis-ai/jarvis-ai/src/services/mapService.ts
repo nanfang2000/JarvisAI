@@ -1,4 +1,5 @@
 import { Loader } from '@googlemaps/js-api-loader';
+import { configManager } from '../config/apiConfig';
 
 // 地图服务接口定义
 export interface MapLocation {
@@ -530,7 +531,7 @@ class MapService {
 }
 
 // 创建单例实例
-const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
-export const mapService = new MapService(GOOGLE_MAPS_API_KEY);
+const googleMapsConfig = configManager.getGoogleMapsConfig();
+export const mapService = new MapService(googleMapsConfig.apiKey);
 
 export default MapService;

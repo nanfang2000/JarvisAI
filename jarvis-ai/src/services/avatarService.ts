@@ -191,7 +191,9 @@ export class AvatarService {
 
   async loadAvatar(config: AvatarConfig): Promise<void> {
     try {
-      const gltf = await this.loadGLTF(config.url);
+      // 使用备选URL机制
+      const validUrl = await ReadyPlayerMeService.loadAvatarWithFallback(config.url);
+      const gltf = await this.loadGLTF(validUrl);
       
       // 移除旧头像
       if (this.currentAvatar) {
@@ -225,7 +227,7 @@ export class AvatarService {
         }
       });
 
-      console.log('Avatar loaded successfully:', config.name);
+      console.log('Avatar loaded successfully:', config.name, 'using URL:', validUrl);
     } catch (error) {
       console.error('Failed to load avatar:', error);
       throw error;
@@ -492,6 +494,13 @@ export class AudioAnalyzer {
 export class ReadyPlayerMeService {
   private static readonly BASE_URL = 'https://models.readyplayer.me/';
   
+  // 备选头像URL列表
+  static readonly FALLBACK_AVATAR_URLS = [
+    'https://models.readyplayer.me/64bc14e7c6ccbefd11b0b8cd.glb',
+    'https://models.readyplayer.me/65f1c5c83bb58e45ec48e91b.glb', 
+    'https://models.readyplayer.me/64bc14e7c6ccbefd11b0b8ce.glb'
+  ];
+  
   static generateAvatarUrl(
     avatarId: string,
     options: {
@@ -521,5 +530,28 @@ export class ReadyPlayerMeService {
     } catch {
       return false;
     }
+  }
+
+  static async loadAvatarWithFallback(primaryUrl?: string): Promise<string> {
+    const urlsToTry = primaryUrl 
+      ? [primaryUrl, ...this.FALLBACK_AVATAR_URLS]
+      : this.FALLBACK_AVATAR_URLS;
+
+    for (const url of urlsToTry) {
+      try {
+        console.log(`尝试验证头像URL: ${url}`);
+        const isValid = await this.validateAvatarUrl(url);
+        if (isValid) {
+          console.log(`头像URL验证成功: ${url}`);
+          return url;
+        }
+      } catch (error) {
+        console.warn(`头像URL验证失败: ${url}`, error);
+      }
+    }
+    
+    // 如果所有URL都失败，返回第一个作为默认值
+    console.warn('所有头像URL验证都失败，使用第一个备选URL');
+    return this.FALLBACK_AVATAR_URLS[0];
   }
 }

@@ -12,12 +12,20 @@ import {
 } from '../../types/avatar';
 import { AvatarService, ReadyPlayerMeService } from '../../services/avatarService';
 import { AdaptiveQualityController } from '../../utils/avatarPerformance';
+import { configManager } from '../../config/apiConfig';
+
+// 备选头像URL列表
+const FALLBACK_AVATAR_URLS = [
+  'https://models.readyplayer.me/64bc14e7c6ccbefd11b0b8cd.glb',
+  'https://models.readyplayer.me/65f1c5c83bb58e45ec48e91b.glb',
+  'https://models.readyplayer.me/64bc14e7c6ccbefd11b0b8ce.glb'
+];
 
 // 默认头像配置
 const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   id: 'default',
   name: 'JARVIS Assistant',
-  url: 'https://models.readyplayer.me/66c4a73cbc4b2e7c9ff6a0b0.glb',
+  url: configManager.getReadyPlayerMeConfig().defaultAvatarUrl || FALLBACK_AVATAR_URLS[0],
   gender: 'male',
   style: 'realistic',
   customization: {}
@@ -34,6 +42,7 @@ const Avatar3DRenderer: React.FC<{
 }> = ({ avatarService, config, emotion, audioAnalysis, onLoad, onError }) => {
   const { scene, camera, gl } = useThree();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [attemptedUrls, setAttemptedUrls] = useState<string[]>([]);
   const qualityControllerRef = useRef<AdaptiveQualityController | null>(null);
 
   // 初始化性能控制器
@@ -44,26 +53,43 @@ const Avatar3DRenderer: React.FC<{
   }, [gl]);
 
   useEffect(() => {
-    const loadAvatar = async () => {
-      try {
-        await avatarService.loadAvatar(config);
-        setIsLoaded(true);
-        onLoad();
-        
-        // 跟踪头像对象用于性能管理
-        if (qualityControllerRef.current && avatarService.getScene().children.length > 0) {
-          avatarService.getScene().children.forEach(child => {
-            qualityControllerRef.current!.trackObject(child);
-          });
+    const loadAvatarWithFallback = async () => {
+      const urlsToTry = [config.url, ...FALLBACK_AVATAR_URLS].filter(url => 
+        !attemptedUrls.includes(url)
+      );
+
+      for (const url of urlsToTry) {
+        try {
+          console.log(`尝试加载头像: ${url}`);
+          const configWithUrl = { ...config, url };
+          await avatarService.loadAvatar(configWithUrl);
+          setIsLoaded(true);
+          onLoad();
+          
+          // 跟踪头像对象用于性能管理
+          if (qualityControllerRef.current && avatarService.getScene().children.length > 0) {
+            avatarService.getScene().children.forEach(child => {
+              qualityControllerRef.current!.trackObject(child);
+            });
+          }
+          return; // 成功加载，退出循环
+        } catch (error) {
+          console.warn(`头像加载失败: ${url}`, error);
+          setAttemptedUrls(prev => [...prev, url]);
+          
+          // 如果是最后一个URL，报告错误
+          if (url === urlsToTry[urlsToTry.length - 1]) {
+            console.error('所有头像URL都加载失败');
+            onError(new Error(`无法加载头像: 所有备选URL都失败了`));
+          }
         }
-      } catch (error) {
-        console.error('Failed to load avatar:', error);
-        onError(error as Error);
       }
     };
 
-    loadAvatar();
-  }, [avatarService, config, onLoad, onError]);
+    if (!isLoaded) {
+      loadAvatarWithFallback();
+    }
+  }, [avatarService, config, onLoad, onError, isLoaded, attemptedUrls]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -363,19 +389,46 @@ const Avatar3D: React.FC<Avatar3DProps & {
         </Box>
       )}
 
-      {/* 错误状态 */}
+      {/* 错误状态和备用显示 */}
       {avatarState.error && (
-        <Box sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '80%'
-        }}>
-          <Alert severity="error">
-            Failed to load avatar: {avatarState.error}
-          </Alert>
-        </Box>
+        <>
+          <Box sx={{
+            position: 'absolute',
+            top: '20%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '80%'
+          }}>
+            <Alert severity="warning">
+              Avatar loading failed. Using fallback representation.
+            </Alert>
+          </Box>
+          
+          {/* 简单的3D备用头像 */}
+          <Canvas
+            camera={{ position: [0, 1.6, 3], fov: 75 }}
+            style={{ 
+              position: 'absolute',
+              top: '40%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '200px',
+              height: '200px'
+            }}
+          >
+            <ambientLight intensity={0.6} />
+            <directionalLight position={[10, 10, 5]} intensity={1} />
+            <mesh position={[0, 0, 0]}>
+              <sphereGeometry args={[0.8, 32, 32]} />
+              <meshStandardMaterial color="#4A90E2" />
+            </mesh>
+            <mesh position={[0, -1.5, 0]}>
+              <cylinderGeometry args={[0.6, 0.8, 2, 8]} />
+              <meshStandardMaterial color="#2C3E50" />
+            </mesh>
+            <OrbitControls enableZoom={false} enablePan={false} />
+          </Canvas>
+        </>
       )}
 
       {/* 控制面板 */}

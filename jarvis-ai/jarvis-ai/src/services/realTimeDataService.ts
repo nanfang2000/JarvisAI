@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { mapService } from './mapService';
 import { priceApiService, ProductPrice } from './priceApiService';
+import { configManager } from '../config/apiConfig';
 
 // 实时数据类型定义
 export interface RealTimeUpdate {
@@ -177,7 +178,8 @@ class RealTimeDataService extends EventEmitter {
 
   // 初始化WebSocket连接
   private initializeWebSocket(): void {
-    const wsUrl = process.env.REACT_APP_WEBSOCKET_URL || 'wss://api.jarvis-ai.com/ws';
+    const wsConfig = configManager.getWebSocketConfig();
+    const wsUrl = wsConfig.url;
     
     try {
       this.websocket = new WebSocket(wsUrl);

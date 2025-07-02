@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use serde_json::Value;
+use tauri::Manager;
 
 // 全局状态管理
 #[derive(Default)]
@@ -210,9 +211,8 @@ pub fn run() {
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 
                 // 尝试启动JARVIS服务
-                if let Ok(app_state) = app_handle.state::<AppState>() {
-                    let _ = start_jarvis_service(app_state).await;
-                }
+                let app_state = app_handle.state::<AppState>();
+                let _ = start_jarvis_service(app_state).await;
             });
             
             Ok(())

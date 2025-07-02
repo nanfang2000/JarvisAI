@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { configManager } from '../config/apiConfig';
 
 // 价格比对服务接口定义
 export interface PriceSearchRequest {
@@ -123,8 +124,9 @@ class PriceApiService {
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
 
   constructor() {
-    this.baseURL = process.env.REACT_APP_PRICE_API_BASE_URL || 'https://api.pricecomparison.com';
-    this.apiKey = process.env.REACT_APP_PRICE_API_KEY || '';
+    const priceConfig = configManager.getPriceApiConfig();
+    this.baseURL = priceConfig.baseUrl;
+    this.apiKey = priceConfig.apiKey;
   }
 
   // 获取API headers

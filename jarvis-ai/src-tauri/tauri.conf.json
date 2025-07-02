@@ -25,11 +25,13 @@
         "decorations": true,
         "alwaysOnTop": false,
         "fullscreen": false,
-        "transparent": false
+        "transparent": false,
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousDisableAssetCspModification": true
     },
     "macOSPrivateApi": true
   },
@@ -42,7 +44,7 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
+    ]
   },
   "plugins": {
     "shell": {
