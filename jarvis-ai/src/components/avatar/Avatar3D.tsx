@@ -44,6 +44,7 @@ const Avatar3DRenderer: React.FC<{
   const [isLoaded, setIsLoaded] = useState(false);
   const [attemptedUrls, setAttemptedUrls] = useState<string[]>([]);
   const qualityControllerRef = useRef<AdaptiveQualityController | null>(null);
+  const [loadingFailed, setLoadingFailed] = useState(false);
 
   // 初始化性能控制器
   useEffect(() => {
@@ -53,10 +54,23 @@ const Avatar3DRenderer: React.FC<{
   }, [gl]);
 
   useEffect(() => {
+    // 如果已经加载成功或者加载失败，就不再尝试
+    if (isLoaded || loadingFailed) {
+      return;
+    }
+
     const loadAvatarWithFallback = async () => {
       const urlsToTry = [config.url, ...FALLBACK_AVATAR_URLS].filter(url => 
         !attemptedUrls.includes(url)
       );
+
+      // 如果没有更多URL可以尝试，标记为失败
+      if (urlsToTry.length === 0) {
+        console.error('所有头像URL都已尝试过，停止加载');
+        setLoadingFailed(true);
+        onError(new Error('无法加载头像: 所有备选URL都失败了'));
+        return;
+      }
 
       for (const url of urlsToTry) {
         try {
@@ -77,19 +91,19 @@ const Avatar3DRenderer: React.FC<{
           console.warn(`头像加载失败: ${url}`, error);
           setAttemptedUrls(prev => [...prev, url]);
           
-          // 如果是最后一个URL，报告错误
+          // 如果是最后一个URL，标记为失败并停止尝试
           if (url === urlsToTry[urlsToTry.length - 1]) {
-            console.error('所有头像URL都加载失败');
+            console.error('所有头像URL都加载失败，停止尝试');
+            setLoadingFailed(true);
             onError(new Error(`无法加载头像: 所有备选URL都失败了`));
+            return;
           }
         }
       }
     };
 
-    if (!isLoaded) {
-      loadAvatarWithFallback();
-    }
-  }, [avatarService, config, onLoad, onError, isLoaded, attemptedUrls]);
+    loadAvatarWithFallback();
+  }, [avatarService, config, onLoad, onError, isLoaded, attemptedUrls, loadingFailed]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -399,8 +413,8 @@ const Avatar3D: React.FC<Avatar3DProps & {
             transform: 'translateX(-50%)',
             width: '80%'
           }}>
-            <Alert severity="warning">
-              Avatar loading failed. Using fallback representation.
+            <Alert severity="info">
+              3D头像加载失败，已停止尝试。使用备用显示。
             </Alert>
           </Box>
           
