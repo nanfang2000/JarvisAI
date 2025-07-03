@@ -42,9 +42,8 @@ const Avatar3DRenderer: React.FC<{
 }> = ({ avatarService, config, emotion, audioAnalysis, onLoad, onError }) => {
   const { scene, camera, gl } = useThree();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [attemptedUrls, setAttemptedUrls] = useState<string[]>([]);
-  const qualityControllerRef = useRef<AdaptiveQualityController | null>(null);
   const [loadingFailed, setLoadingFailed] = useState(false);
+  const qualityControllerRef = useRef<AdaptiveQualityController | null>(null);
 
   // 初始化性能控制器
   useEffect(() => {
@@ -54,29 +53,29 @@ const Avatar3DRenderer: React.FC<{
   }, [gl]);
 
   useEffect(() => {
-    // 如果已经加载成功或者加载失败，就不再尝试
-    if (isLoaded || loadingFailed) {
-      return;
-    }
-
-    const loadAvatarWithFallback = async () => {
-      const urlsToTry = [config.url, ...FALLBACK_AVATAR_URLS].filter(url => 
-        !attemptedUrls.includes(url)
-      );
-
-      // 如果没有更多URL可以尝试，标记为失败
-      if (urlsToTry.length === 0) {
-        console.error('所有头像URL都已尝试过，停止加载');
-        setLoadingFailed(true);
-        onError(new Error('无法加载头像: 所有备选URL都失败了'));
+    let isMounted = true;
+    
+    const loadAvatarOnce = async () => {
+      // 如果已经加载成功或失败，不再尝试
+      if (isLoaded || loadingFailed) {
         return;
       }
 
-      for (const url of urlsToTry) {
+      const allUrls = [config.url, ...FALLBACK_AVATAR_URLS];
+      console.log('🎭 开始尝试加载头像，总共', allUrls.length, '个URL');
+
+      for (let i = 0; i < allUrls.length; i++) {
+        if (!isMounted) return;
+        
+        const url = allUrls[i];
         try {
-          console.log(`尝试加载头像: ${url}`);
+          console.log(`🎭 尝试加载头像 ${i + 1}/${allUrls.length}: ${url}`);
           const configWithUrl = { ...config, url };
           await avatarService.loadAvatar(configWithUrl);
+          
+          if (!isMounted) return;
+          
+          console.log('✅ 头像加载成功！');
           setIsLoaded(true);
           onLoad();
           
@@ -86,24 +85,28 @@ const Avatar3DRenderer: React.FC<{
               qualityControllerRef.current!.trackObject(child);
             });
           }
-          return; // 成功加载，退出循环
+          return; // 成功加载，退出
         } catch (error) {
-          console.warn(`头像加载失败: ${url}`, error);
-          setAttemptedUrls(prev => [...prev, url]);
+          console.warn(`❌ 头像加载失败 ${i + 1}/${allUrls.length}:`, error);
           
-          // 如果是最后一个URL，标记为失败并停止尝试
-          if (url === urlsToTry[urlsToTry.length - 1]) {
-            console.error('所有头像URL都加载失败，停止尝试');
+          // 如果是最后一个URL，标记失败
+          if (i === allUrls.length - 1) {
+            if (!isMounted) return;
+            console.error('🛑 所有头像URL都失败，停止尝试');
             setLoadingFailed(true);
-            onError(new Error(`无法加载头像: 所有备选URL都失败了`));
+            onError(new Error('无法加载3D头像'));
             return;
           }
         }
       }
     };
 
-    loadAvatarWithFallback();
-  }, [avatarService, config, onLoad, onError, isLoaded, attemptedUrls, loadingFailed]);
+    loadAvatarOnce();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [avatarService, config.url]); // 只依赖关键属性，避免无限循环
 
   useEffect(() => {
     if (isLoaded) {
